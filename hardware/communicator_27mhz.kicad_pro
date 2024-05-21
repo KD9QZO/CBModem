@@ -456,6 +456,18 @@
     [
       "66bc2bca-dab7-4947-a0ff-403cdaf9fb89",
       ""
+    ],
+    [
+      "69825c7e-0cdd-4715-9cd3-8c3697dbeac4",
+      "Transmitter"
+    ],
+    [
+      "0b25495c-c7e8-44a6-886f-f777cd1e06d8",
+      "Receiver"
+    ],
+    [
+      "4ad48d60-33cd-42cc-bcc7-eb3cf294a1a5",
+      "Microcontroller"
     ]
   ],
   "text_variables": {}
