@@ -24,20 +24,20 @@ void cdsp_src_adc::setAdcChannels(int adc_i_ch, int adc_q_ch) {
 
 int cdsp_src_adc::requestData(void* ctx, cdsp_complex_t* data, int samples_cnt) {
     cdsp_src_adc* _this = (cdsp_src_adc*) ctx;
-    if(!_this->_running) {return -2;}
+    if (!_this->_running) {return -2;}
     int req_data = std::min(samples_cnt, CDSP_DEF_BUFF_SIZE);
     int got = 0;
     got = _this->_adc_dev->read_samples(_this->_in_buf, req_data, CDSP_SOURCE_TIMEOUT);
-    if(got <= 0) {return got;}
-    for(int i = 0; i < got; i++) {
-        if(_this->_in_buf[i].channelI == _this->_adc_i_ch) {
+    if (got <= 0) {return got;}
+    for (int i = 0; i < got; i++) {
+        if (_this->_in_buf[i].channelI == _this->_adc_i_ch) {
             data[i].i = ((float)_this->_in_buf[i].dataI * _this->_convert_divisor) - 1.0f;
-        } else if(_this->_in_buf[i].channelQ == _this->_adc_i_ch) {
+        } else if (_this->_in_buf[i].channelQ == _this->_adc_i_ch) {
             data[i].i = ((float)_this->_in_buf[i].dataQ * _this->_convert_divisor) - 1.0f;
         }
-        if(_this->_in_buf[i].channelQ == _this->_adc_q_ch) {
+        if (_this->_in_buf[i].channelQ == _this->_adc_q_ch) {
             data[i].q = ((float)_this->_in_buf[i].dataQ * _this->_convert_divisor) - 1.0f;
-        } else if(_this->_in_buf[i].channelI == _this->_adc_q_ch) {
+        } else if (_this->_in_buf[i].channelI == _this->_adc_q_ch) {
             data[i].q = ((float)_this->_in_buf[i].dataI * _this->_convert_divisor) - 1.0f;
         }
     }

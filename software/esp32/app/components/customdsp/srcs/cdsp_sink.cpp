@@ -5,9 +5,9 @@ cdsp_sink_dac::cdsp_sink_dac(chl_i2sanalog* dac_dev, bool dac_out_ch) {
     _dac_out_ch = dac_out_ch;
     _dac_dev->stopTx();
     _dac_dev->clearTxBuffers();
-    for(int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
+    for (int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
         _out_bufs[i] = (chl_i2sanalog_dact*)heap_caps_malloc(CDSP_DEF_BUFF_SIZE*sizeof(chl_i2sanalog_dact), MALLOC_CAP_DMA);
-        if(_out_bufs[i] == NULL) {
+        if (_out_bufs[i] == NULL) {
             printf("CDSP_SINK_DAC ERROR: NOT ENOUGH MEMORY FOR BUFFER %d\r\n", i);
             return;
         }
@@ -16,7 +16,7 @@ cdsp_sink_dac::cdsp_sink_dac(chl_i2sanalog* dac_dev, bool dac_out_ch) {
 }
 
 cdsp_sink_dac::~cdsp_sink_dac() {
-     for(int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
+     for (int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
         heap_caps_free(_out_bufs[i]);
      }
 }
@@ -27,30 +27,30 @@ void cdsp_sink_dac::setOutChannel(bool dac_out_ch) {
 
 int cdsp_sink_dac::work(void* ctx, int samples_cnt) {
     cdsp_sink_dac* _this = (cdsp_sink_dac*) ctx;
-    if(!_this->_running) {return -2;}
+    if (!_this->_running) {return -2;}
     int req_data = std::min(samples_cnt, CDSP_DEF_BUFF_SIZE);
     int got = _this->_input_func(_this->_func_call_ctx, _this->_in_buff, req_data);
-    if(got <= 0) {return got;}
+    if (got <= 0) {return got;}
     int curr_buff = -1;
-    for(int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
-        if(_this->_curr_buff_status[i] == 0) {
+    for (int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
+        if (_this->_curr_buff_status[i] == 0) {
             //buff is free, using
             curr_buff = i;
             break;
         }
     }
-    if(curr_buff == -1) {
+    if (curr_buff == -1) {
         printf("CDSP_SINK_DAC ERROR: NO FREE BUFFERS!\r\n");
         return -2;
     }
-    for(int i = 0; i < got; i++) {
+    for (int i = 0; i < got; i++) {
         (_this->_dac_out_ch ? _this->_out_bufs[curr_buff][i].ch1d : _this->_out_bufs[curr_buff][i].ch2d) = _this->_in_buff[i] * _this->_conv_coeff;
         (_this->_dac_out_ch ? _this->_out_bufs[curr_buff][i].ch2d : _this->_out_bufs[curr_buff][i].ch1d) = 0;
     }
     int swapped = _this->_dac_dev->set_tx_buffer(_this->_out_bufs[curr_buff], got, CDSP_SINK_TIMEOUT);
-    if(swapped < 0) { return swapped; }
-    for(int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
-        if(_this->_curr_buff_status[i] == swapped + 1) { //buff i has been transmitted successfully, now free
+    if (swapped < 0) { return swapped; }
+    for (int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
+        if (_this->_curr_buff_status[i] == swapped + 1) { //buff i has been transmitted successfully, now free
             _this->_curr_buff_status[i] = 0;
             break;
         }
@@ -61,14 +61,14 @@ int cdsp_sink_dac::work(void* ctx, int samples_cnt) {
 
 void cdsp_sink_dac::_do_start() {
     _dac_dev->clearTxBuffers();
-    for(int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
+    for (int i = 0; i < CDSP_SINK_DAC_BUFFS_CNT; i++) {
         _curr_buff_status[i] = 0;
     }
     //Fill 2 buffers before starting tx to make sure it will not stop
     int got = work(this, CDSP_DEF_BUFF_SIZE);
-    if(got <= 0) { printf("CDSP_SINK_DAC START 1 ERROR: GOT %d SPLS!\r\n", got); return; }
+    if (got <= 0) { printf("CDSP_SINK_DAC START 1 ERROR: GOT %d SPLS!\r\n", got); return; }
     got = work(this, CDSP_DEF_BUFF_SIZE);
-    if(got <= 0) { printf("CDSP_SINK_DAC START 2 ERROR: GOT %d SPLS!\r\n", got); return; }
+    if (got <= 0) { printf("CDSP_SINK_DAC START 2 ERROR: GOT %d SPLS!\r\n", got); return; }
     _dac_dev->startTx();
 }
 
@@ -88,7 +88,7 @@ cdsp_sink_si5351_fr::cdsp_sink_si5351_fr(chl_ext_si5351* si5351_dev, bool pll, i
     setPll(pll);
     setTimerRate(timer_rate);
     _write_bsmph = xSemaphoreCreateBinary();
-    if(_write_bsmph == NULL) {
+    if (_write_bsmph == NULL) {
         printf("Si5351 SINK ERROR: NOT ENOUGH MEMORY FOR TX SMPH!\r\n");
         return;
     }
@@ -121,8 +121,8 @@ void cdsp_sink_si5351_fr::asyncSetFreq(int32_t newfr) {
 }
 
 int cdsp_sink_si5351_fr::syncSetFreq(int32_t newfr) {
-    if(!_running) {return -2;}
-    if(xSemaphoreTake(_write_bsmph, CDSP_SINK_TIMEOUT) != pdTRUE) {
+    if (!_running) {return -2;}
+    if (xSemaphoreTake(_write_bsmph, CDSP_SINK_TIMEOUT) != pdTRUE) {
         return -3;
     }
     _curr_freq = newfr;
@@ -130,11 +130,11 @@ int cdsp_sink_si5351_fr::syncSetFreq(int32_t newfr) {
 }
 
 int cdsp_sink_si5351_fr::syncQueueFreqs(int32_t* newfrs, int cnt) {
-    if(!_running) {return -2;}
-    for(int i = 0; i < cnt; i++) {
-        if(((_freq_buff_write_ptr+1)%CDSP_DEF_BUFF_SIZE) == _freq_buff_read_ptr) { //if current write will overflow the buffer
+    if (!_running) {return -2;}
+    for (int i = 0; i < cnt; i++) {
+        if (((_freq_buff_write_ptr+1)%CDSP_DEF_BUFF_SIZE) == _freq_buff_read_ptr) { //if current write will overflow the buffer
             printf("FO\n");
-            if(xSemaphoreTake(_write_bsmph, CDSP_SINK_TIMEOUT) != pdTRUE) { //wait until some data is consumed
+            if (xSemaphoreTake(_write_bsmph, CDSP_SINK_TIMEOUT) != pdTRUE) { //wait until some data is consumed
                 return -3;
             }
         }
@@ -147,7 +147,7 @@ int cdsp_sink_si5351_fr::syncQueueFreqs(int32_t* newfrs, int cnt) {
 void cdsp_sink_si5351_fr::isr_work(void* ctx) {
     cdsp_sink_si5351_fr* _this = (cdsp_sink_si5351_fr*)ctx;
     portBASE_TYPE contsw_req = false;
-    if(_this->_freq_buff_write_ptr != _this->_freq_buff_read_ptr) { //if some data is in the buffer
+    if (_this->_freq_buff_write_ptr != _this->_freq_buff_read_ptr) { //if some data is in the buffer
         _this->_curr_freq = _this->_freq_buff[_this->_freq_buff_read_ptr];
         _this->_freq_buff_read_ptr = (_this->_freq_buff_read_ptr+1)%CDSP_DEF_BUFF_SIZE;
     } else {
@@ -159,15 +159,15 @@ void cdsp_sink_si5351_fr::isr_work(void* ctx) {
     // _this->_si5351_dev->set_outputs_pll(!_this->_pll, &contsw_req);
     // _this->_pll = !_this->_pll;
     xSemaphoreGiveFromISR(_this->_write_bsmph, &contsw_req);
-    if(contsw_req) {
+    if (contsw_req) {
         portYIELD_FROM_ISR();
     }
 }
 
 int cdsp_sink_si5351_fr::work(void* ctx, int samples_cnt) {
     cdsp_sink_si5351_fr* _this = (cdsp_sink_si5351_fr*)ctx;
-    if(!_this->_running) {return -2;}
-    if(xSemaphoreTake(_this->_write_bsmph, CDSP_SINK_TIMEOUT) != pdTRUE) {
+    if (!_this->_running) {return -2;}
+    if (xSemaphoreTake(_this->_write_bsmph, CDSP_SINK_TIMEOUT) != pdTRUE) {
         return -3;
     }
     int got = _this->_input_func(_this->_func_call_ctx, &(_this->_curr_freq), 1);
@@ -227,7 +227,7 @@ void cdsp_sink_combined::setSr(int timer_rate, int interp) {
 
 void cdsp_sink_combined::setTaps(int taps_cnt) {
 	_taps_cnt = taps_cnt;
-	if(_interpol_fir_taps != NULL) {
+	if (_interpol_fir_taps != NULL) {
 		delete[] _interpol_fir_taps;
 	}
 	_interpol_fir_taps = new float[_taps_cnt];
@@ -242,11 +242,11 @@ int cdsp_sink_combined::work(void* ctx, int samples_cnt) {
 
 int cdsp_sink_combined::amplf_req_func(void* ctx, float* data, int samples_cnt) {
     cdsp_sink_combined* _this = (cdsp_sink_combined*) ctx;
-    if(!_this->_running || _this->_input_func == NULL) {return -2;}
+    if (!_this->_running || _this->_input_func == NULL) {return -2;}
     int req_data = std::min(samples_cnt, CDSP_DEF_BUFF_SIZE);
     int got = _this->_input_func(_this->_func_call_ctx, _this->_in_buff, req_data);
-    if(got <= 0) {return got;}
-    for(int i = 0; i < got; i++) {
+    if (got <= 0) {return got;}
+    for (int i = 0; i < got; i++) {
         cdsp_complex_t spl = _this->_in_buff[i];
         float ph = spl.ph();
         float phdiff = (ph - _this->_prev_ph);
@@ -255,8 +255,8 @@ int cdsp_sink_combined::amplf_req_func(void* ctx, float* data, int samples_cnt) 
         // printf("fr %f(phd %f/2pi)\n", curr_freq_hz, phdiff/(2.0f*FL_PI));
         float ampl = spl.mag();
         // float ampl = 1.0f;
-        if(ampl > 1.0f) ampl = 1.0f;
-        if(ampl < 0.0f) ampl = 0.0f;
+        if (ampl > 1.0f) ampl = 1.0f;
+        if (ampl < 0.0f) ampl = 0.0f;
         _this->_prev_ph = ph;
 
         _this->_fr_delay_buff[_this->_fr_delay_buff_wptr] = curr_freq_hz;
@@ -271,7 +271,7 @@ int cdsp_sink_combined::amplf_req_func(void* ctx, float* data, int samples_cnt) 
 
 void cdsp_sink_combined::_do_start() {
     _prev_ph = 0;
-    for(int i = 0; i < CDSP_SINK_COMB_FREQ_DELAY_SIZE; i++) {
+    for (int i = 0; i < CDSP_SINK_COMB_FREQ_DELAY_SIZE; i++) {
         _fr_delay_buff[i] = 0.0f;
     }
     _fr_delay_buff_rptr = 0;

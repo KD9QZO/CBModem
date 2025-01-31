@@ -51,7 +51,7 @@ static const uint32_t iomux_regs[40] = {
 };
 
 inline void chl_gpio_iomux_select_func(int gpio, uint32_t func) {
-    if(rtc_io_num_map[gpio] != -1) {
+    if (rtc_io_num_map[gpio] != -1) {
         REG_CLR_BIT(rtc_io_desc[rtc_io_num_map[gpio]].reg, rtc_io_desc[rtc_io_num_map[gpio]].mux); //if pin is an RTC pin, redirect it to the IOMUX
     }
     REG_SET_FIELD(iomux_regs[gpio], MCU_SEL, func);
@@ -59,41 +59,41 @@ inline void chl_gpio_iomux_select_func(int gpio, uint32_t func) {
 
 inline void chl_gpio_set_direction(int gpio, bool input, bool output, bool od, bool pulldown, bool pullup) {
     REG_SET_FIELD(iomux_regs[gpio], FUN_IE, input);
-    if(rtc_io_num_map[gpio] == -1) {
+    if (rtc_io_num_map[gpio] == -1) {
         REG_SET_FIELD(iomux_regs[gpio], FUN_PU, pullup);
         REG_SET_FIELD(iomux_regs[gpio], FUN_PD, pulldown);
-    } else if(rtc_io_desc[rtc_io_num_map[gpio]].pullup != 0) {
-        if(input) {
+    } else if (rtc_io_desc[rtc_io_num_map[gpio]].pullup != 0) {
+        if (input) {
             REG_SET_BIT(rtc_io_desc[rtc_io_num_map[gpio]].reg, rtc_io_desc[rtc_io_num_map[gpio]].ie);
         } else {
             REG_CLR_BIT(rtc_io_desc[rtc_io_num_map[gpio]].reg, rtc_io_desc[rtc_io_num_map[gpio]].ie);
         }
-        if(pullup) {
+        if (pullup) {
             REG_SET_BIT(rtc_io_desc[rtc_io_num_map[gpio]].reg, rtc_io_desc[rtc_io_num_map[gpio]].pullup);
         } else {
             REG_CLR_BIT(rtc_io_desc[rtc_io_num_map[gpio]].reg, rtc_io_desc[rtc_io_num_map[gpio]].pullup);
         }
-        if(pulldown) {
+        if (pulldown) {
             REG_SET_BIT(rtc_io_desc[rtc_io_num_map[gpio]].reg, rtc_io_desc[rtc_io_num_map[gpio]].pulldown);
         } else {
             REG_CLR_BIT(rtc_io_desc[rtc_io_num_map[gpio]].reg, rtc_io_desc[rtc_io_num_map[gpio]].pulldown);
         }
     }
-    if(gpio < 32) {
-        if(output) {
+    if (gpio < 32) {
+        if (output) {
             REG_SET_BIT(GPIO_ENABLE_REG, (1 << gpio));
         } else {
             REG_CLR_BIT(GPIO_ENABLE_REG, (1 << gpio));
         }
     } else {
-        if(output) {
+        if (output) {
             REG_SET_BIT(GPIO_ENABLE1_REG, (1 << (gpio-32)));
         } else {
             REG_CLR_BIT(GPIO_ENABLE1_REG, (1 << (gpio-32)));
         }
     }
     uint32_t gpio_reg = GPIO_PIN0_REG + gpio*0x4;
-    if(od) {
+    if (od) {
         REG_SET_BIT(gpio_reg, GPIO_PIN0_PAD_DRIVER);
     } else {
         REG_CLR_BIT(gpio_reg, GPIO_PIN0_PAD_DRIVER);
@@ -101,14 +101,14 @@ inline void chl_gpio_set_direction(int gpio, bool input, bool output, bool od, b
 }
 
 inline void chl_gpio_set_level(int gpio, bool level) {
-    if(gpio < 32) {
-        if(level) {
+    if (gpio < 32) {
+        if (level) {
             REG_SET_BIT(GPIO_OUT_REG, (1 << gpio));
         } else {
             REG_CLR_BIT(GPIO_OUT_REG, (1 << gpio));
         }
     } else {
-        if(level) {
+        if (level) {
             REG_SET_BIT(GPIO_OUT1_REG, (1 << (gpio-32)));
         } else {
             REG_CLR_BIT(GPIO_OUT1_REG, (1 << (gpio-32)));
@@ -117,7 +117,7 @@ inline void chl_gpio_set_level(int gpio, bool level) {
 }
 
 inline bool chl_gpio_get_level(int gpio) {
-    if(gpio < 32) {
+    if (gpio < 32) {
         uint8_t reg_pos = gpio;
         return ((REG_READ(GPIO_IN_REG) & (1 << reg_pos)) >> reg_pos);
     } else {
@@ -137,19 +137,19 @@ inline void chl_gpio_connect_in(int gpio, int in_sig_idx, bool invert, bool iomu
 }
 
 inline void chl_rtc_gpio_enable_dacs(bool first, bool second) {
-    if(first) {
+    if (first) {
         REG_WRITE(RTC_IO_PAD_DAC1_REG, (2 << RTC_IO_PDAC1_DRV_S) | (0 << RTC_IO_PDAC1_DAC_S) | RTC_IO_PDAC1_XPD_DAC | RTC_IO_PDAC1_MUX_SEL | RTC_IO_PDAC1_DAC_XPD_FORCE);
     }
-    if(second) {
+    if (second) {
         REG_WRITE(RTC_IO_PAD_DAC2_REG, (2 << RTC_IO_PDAC2_DRV_S) | (0 << RTC_IO_PDAC2_DAC_S) | RTC_IO_PDAC2_XPD_DAC | RTC_IO_PDAC2_MUX_SEL | RTC_IO_PDAC2_DAC_XPD_FORCE);
     }
 }
 
 inline void chl_rtc_gpio_disable_dacs(bool first, bool second) {
-    if(first) {
+    if (first) {
         REG_WRITE(RTC_IO_PAD_DAC1_REG, (2 << RTC_IO_PDAC1_DRV_S) | (0 << RTC_IO_PDAC1_DAC_S));
     }
-    if(second) {
+    if (second) {
         REG_WRITE(RTC_IO_PAD_DAC2_REG, (2 << RTC_IO_PDAC2_DRV_S) | (0 << RTC_IO_PDAC2_DAC_S));
     }
 }
