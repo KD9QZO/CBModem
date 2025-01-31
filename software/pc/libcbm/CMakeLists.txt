@@ -1,14 +1,14 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required(VERSION 3.1)
 
-project (libcbm)
+project(libcbm)
 
 set(CMAKE_INSTALL_PREFIX "/usr/")
 include(GNUInstallDirs)
 
 file(GLOB SRC
-    "*.cpp"
-    "*.c"
-    )
+        "*.cpp"
+        "*.c"
+)
 
 add_library(libcbm SHARED ${SRC})
 target_compile_options(libcbm PRIVATE "-std=gnu++20" "-g")
