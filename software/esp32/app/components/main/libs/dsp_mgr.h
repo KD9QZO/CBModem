@@ -275,16 +275,18 @@ void dsp_mgr::reloadParams() {
 
 void dsp_mgr::dspcore_main(void *arg) {
 	printf("DSP core: %d\n", xPortGetCoreID());
-	//Move interrupts to the DSP core for speed
+	// Move interrupts to the DSP core for speed
 	maini2c = new chl_i2c(0, params::readParam("dm_i2cl", 400), MAINI2C_SDA_GPIO, MAINI2C_SCL_GPIO);
 	maini2s = new chl_i2sanalog();
 	mainsi5351 = new chl_ext_si5351(params::readParam("dm_siaddr", 0x60), maini2c, params::readParam("dm_sixf", 25000000));
 	dsp_mainadcsrc = new cdsp_src_adc(maini2s, MAINI2S_I_HIGH_CH, MAINI2S_Q_HIGH_CH, params::readParam("dm_adcbw", 12));
 	dsp_maincombsink = new cdsp_sink_combined(maini2s, mainsi5351, params::readParam("dm_tca", 6), params::readParam("dm_tcb", 0), MAINI2S_DAC_CH, false, cache_tisr, cache_tdsr / cache_tisr, params::readParam("dm_toft", 33));
+
 	while (true) {
 		uint32_t sdr_rx_spls = params::readParam("dm_sdrrxspls", 16);
 		uint32_t rx_spls = params::readParam("dm_rxspls", 16);
 		uint32_t tx_spls = params::readParam("dm_txspls", 128);
+
 		while (true) {
 			lock_dsp_mtx();
 			if (curr_mode == DSPMGR_MODE_IDLE) {
@@ -295,14 +297,13 @@ void dsp_mgr::dspcore_main(void *arg) {
 				switch (curr_mode) {
 					case DSPMGR_MODE_SDR_RX: {
 						int r = dsp_rxindecim->requestData(dsp_rxindecim, sdr_rx_data, sdr_rx_spls);
-//                    	int r = dsp_nrxagc->requestData(dsp_nrxagc, sdr_rx_data, sdr_rx_spls);
+//						int r = dsp_nrxagc->requestData(dsp_nrxagc, sdr_rx_data, sdr_rx_spls);
 						if (r > 0) {
 							for (int i = 0; i < r; i++) {
 								(curr_sdr_rx_buff ? sdr_rx_buff_a : sdr_rx_buff_b)[i] = sdr_rx_data[i];
 							}
 							if (sdr_rx_cb != NULL) {
-								sdr_rx_cb(sdr_rx_cb_ctx, (
-										curr_sdr_rx_buff ? sdr_rx_buff_a : sdr_rx_buff_b), r);
+								sdr_rx_cb(sdr_rx_cb_ctx, (curr_sdr_rx_buff ? sdr_rx_buff_a : sdr_rx_buff_b), r);
 							}
 							curr_sdr_rx_buff = !curr_sdr_rx_buff;
 						} else if (r < 0) {
@@ -313,6 +314,7 @@ void dsp_mgr::dspcore_main(void *arg) {
 						}
 						break;
 					}
+
 					case DSPMGR_MODE_TX_CARRIER:
 					case DSPMGR_MODE_SDR_TX: {
 						int r = dsp_maincombsink->work(dsp_maincombsink, tx_spls);
@@ -324,11 +326,12 @@ void dsp_mgr::dspcore_main(void *arg) {
 						}
 						break;
 					}
+
 					case DSPMGR_MODE_BFSK_TX: {
 						int r = dsp_maincombsink->work(dsp_maincombsink, tx_spls);
 						if (r < 0) {
 							if (r == -10) {
-								//normal tx completion
+								// normal tx completion
 								if (n_tx_cb != NULL) {
 									n_tx_cb(n_tx_cb_ctx);
 								}
@@ -341,6 +344,7 @@ void dsp_mgr::dspcore_main(void *arg) {
 						}
 						break;
 					}
+
 					case DSPMGR_MODE_BFSK_RX: {
 						int r = dsp_n_bfskdemod->requestData(dsp_n_bfskdemod, n_rx_data, rx_spls);
 						if (r > 0) {
@@ -362,11 +366,12 @@ void dsp_mgr::dspcore_main(void *arg) {
 						}
 						break;
 					}
+
 					case DSPMGR_MODE_MFSK_TX: {
 						int r = dsp_maincombsink->work(dsp_maincombsink, tx_spls);
 						if (r < 0) {
 							if (r == -10) {
-								//normal tx completion
+								// normal tx completion
 								if (n_tx_cb != NULL) {
 									n_tx_cb(n_tx_cb_ctx);
 								}
@@ -379,12 +384,13 @@ void dsp_mgr::dspcore_main(void *arg) {
 						}
 						break;
 					}
+
 					case DSPMGR_MODE_MFSK_RX: {
 						int r = dsp_n_mfskdemod->requestData(dsp_n_mfskdemod, n_rx_data, rx_spls);
 						if (r > 0) {
 							if (afc_search_mode) {
 								afc_ctr++;
-								if (afc_ctr >= 32/rx_spls) {
+								if (afc_ctr >= 32 / rx_spls) {
 									afc_ctr = 0;
 									apply_afc();
 								}
@@ -400,6 +406,7 @@ void dsp_mgr::dspcore_main(void *arg) {
 						}
 						break;
 					}
+
 					case DSPMGR_MODE_MSK_TX: {
 						int r = dsp_maincombsink->work(dsp_maincombsink, tx_spls);
 						if (r < 0) {
@@ -417,6 +424,7 @@ void dsp_mgr::dspcore_main(void *arg) {
 						}
 						break;
 					}
+
 					case DSPMGR_MODE_MSK_RX: {
 						int r = dsp_n_mskdemod->requestData(dsp_n_mskdemod, n_rx_data, rx_spls);
 						if (r > 0) {
@@ -438,6 +446,7 @@ void dsp_mgr::dspcore_main(void *arg) {
 						}
 						break;
 					}
+
 					default:
 						break;
 				}
@@ -458,10 +467,12 @@ int dsp_mgr::sdr_tx_reqfunc(void *ctx, cdsp_complex_t *data, int samples_cnt) {
 			printf("BU\n");
 		}
 	}
+
 	if (sdr_tx_waiting_task_hdl != NULL) {
 		xTaskNotifyGive(sdr_tx_waiting_task_hdl);
 	}
-	return samples_cnt;
+
+	return (samples_cnt);
 }
 
 int dsp_mgr::sdr_tx_carrier_reqfunc(void *ctx, cdsp_complex_t *data, int samples_cnt) {
@@ -469,7 +480,8 @@ int dsp_mgr::sdr_tx_carrier_reqfunc(void *ctx, cdsp_complex_t *data, int samples
 		data[i].i = 1.0f;
 		data[i].q = 0.0f;
 	}
-	return samples_cnt;
+
+	return (samples_cnt);
 }
 
 void dsp_mgr::reset() {
@@ -518,11 +530,11 @@ void dsp_mgr::apply_afc() {
 	if (curr_mode == DSPMGR_MODE_BFSK_RX) {
 		relfrshift = -dsp_n_bfskdemod->_avgerr;
 	} else if (curr_mode == DSPMGR_MODE_MFSK_RX) {
-//        printf("FRE %f\n", dsp_n_mfskdemod->_avgerr);
+//		printf("FRE %f\n", dsp_n_mfskdemod->_avgerr);
 		relfrshift = -dsp_n_mfskdemod->_avgerr;
 	} else if (curr_mode == DSPMGR_MODE_MSK_RX) {
-//        printf("FRE %f\n", dsp_n_mskdemod->_avgerr);
-//        relfrshift = -dsp_n_mskdemod->_avgerr; //AFC is broken for MSK
+//		printf("FRE %f\n", dsp_n_mskdemod->_avgerr);
+//		relfrshift = -dsp_n_mskdemod->_avgerr; //AFC is broken for MSK
 	}
 	if (relfrshift != 0) {
 		afc_shift += relfrshift * AFC_RATE;
@@ -560,7 +572,7 @@ void dsp_mgr::general_rx_stop() {
 void dsp_mgr::general_tx_start() {
 	pin_mgr::set_txp_enable(true);
 	mainsi5351->set_output_enabled(true, true);
-	// maini2c->force_gpio(true);
+//	maini2c->force_gpio(true);
 	maini2c->set_speed(params::readParam("dm_i2ch", 900));
 	maini2s->setSampleRate(cache_tdsr);
 	dsp_maincombsink->start(true);
@@ -571,7 +583,7 @@ void dsp_mgr::general_tx_start() {
 void dsp_mgr::general_tx_stop() {
 	pin_mgr::set_txp_enable(false);
 	dsp_maincombsink->stop(true);
-	// maini2c->force_gpio(false);
+//	maini2c->force_gpio(false);
 	maini2c->set_speed(params::readParam("dm_i2cl", 400));
 	mainsi5351->set_output_enabled(false, false);
 	set_fr(mainsi5351->get_curr_center_freq(), false);
@@ -581,16 +593,16 @@ void dsp_mgr::general_tx_stop() {
 void dsp_mgr::sdr_rx_start() {
 	if (curr_mode == DSPMGR_MODE_IDLE) {
 		lock_dsp_mtx();
-		//Configure blocks, calculate taps
+		// Configure blocks, calculate taps
 		dsp_rxindecim->setDecimation(roundf(cache_risr / sdr_rx_sr));
 		cdsp_calc_taps_lpf_float(dsp_rxinfir_taps, params::readParam("dm_rift", 33), cache_risr, sdr_rx_sr / 2.0f, true);
-		//Make the chain
-//        dsp_nrxagc->setInputBlk(dsp_nrxdcb, dsp_nrxdcb->requestData);
+		// Make the chain
+//		dsp_nrxagc->setInputBlk(dsp_nrxdcb, dsp_nrxdcb->requestData);
 //		dsp_nrxdcb->setInputBlk(dsp_rxindecim, dsp_rxindecim->requestData);
-		//Start last block
+		// Start last block
 		general_rx_start();
 		dsp_rxindecim->start(true);
-//        dsp_nrxagc->start(true);
+//		dsp_nrxagc->start(true);
 		curr_mode = DSPMGR_MODE_SDR_RX;
 		notifyDspTask();
 		unlock_dsp_mtx();
@@ -604,7 +616,7 @@ void dsp_mgr::sdr_rx_stop(bool from_dspc) {
 		}
 		curr_mode = DSPMGR_MODE_IDLE;
 		dsp_rxindecim->stop(true);
-//        dsp_nrxagc->stop(true);
+//		dsp_nrxagc->stop(true);
 		general_rx_stop();
 		if (!from_dspc) {
 			notifyDspTask();
@@ -631,10 +643,10 @@ void dsp_mgr::sdr_rx_set_cb(void (*new_sdr_rx_cb)(void*, cdsp_complex_t*, int), 
 void dsp_mgr::sdr_tx_start() {
 	if (curr_mode == DSPMGR_MODE_IDLE) {
 		lock_dsp_mtx();
-		//Configure blocks, calculate taps
-		//Make the chain
+		// Configure blocks, calculate taps
+		// Make the chain
 		dsp_maincombsink->setInputFunc(NULL, sdr_tx_reqfunc);
-		//Start last block
+		// Start last block
 		curr_mode = DSPMGR_MODE_SDR_TX;
 		general_tx_start();
 		unlock_dsp_mtx();

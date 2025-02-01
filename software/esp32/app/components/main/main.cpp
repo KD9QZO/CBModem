@@ -7,7 +7,7 @@
 
 #include "chl_uart.h"
 
-// #include "driver/uart.h"
+//#include "driver/uart.h"
 
 #include "cdsp_common.h"
 #include "libs/params.h"
@@ -21,7 +21,7 @@
 extern "C" void app_main();
 
 
-chl_uart_dma *mainuart = NULL; // DMA works too unstable??
+chl_uart_dma *mainuart = NULL;							// DMA works too unstable??
 
 DMA_ATTR uint8_t packet_send_buff[MAX_PC_P_SIZE];
 DMA_ATTR uint8_t packet_read_buff[MAX_PC_P_SIZE];
@@ -43,6 +43,7 @@ TaskHandle_t acksend_task_hdl = NULL;
 bool rightparity = false;
 
 
+
 void IRAM_ATTR uart_sync_packet_send(pc_packet_interface::pc_packet p) {
 	mainuart->waitForTxFinish();
 //	ESP_ERROR_CHECK(uart_wait_tx_done(UART_NUM_0, 100)); // wait timeout is 100 RTOS ticks (TickType_t)
@@ -56,14 +57,14 @@ void IRAM_ATTR uart_sync_packet_send(pc_packet_interface::pc_packet p) {
 			packet_send_buff[4 + i] = p.data[i];
 		}
 	}
-	packet_send_buff[4 + p.len] = calc_crc8(&packet_send_buff[1], p.len+3);
+	packet_send_buff[4 + p.len] = calc_crc8(&packet_send_buff[1], p.len + 3);
 	mainuart->transmit_bytes(packet_send_buff, bufs, true);
 //	uart_write_bytes(UART_NUM_0, packet_send_buff, bufs);
 }
 
 // blocks until packet is received; No thread safety!!!
 void IRAM_ATTR uart_sync_packet_read(pc_packet_interface::pc_packet *p) {
-	int state = 0; // 0-receiving startByte; 1-receiving type; 2-receiving len; 3-receiving data; 4-receiving checksum
+	int state = 0;	// 0-receiving startByte; 1-receiving type; 2-receiving len; 3-receiving data; 4-receiving checksum
 	int outdata_pos = 0;
 	uint8_t checksum_buff[sizeof(pc_packet_interface::pc_packet)];
 
@@ -82,12 +83,12 @@ void IRAM_ATTR uart_sync_packet_read(pc_packet_interface::pc_packet *p) {
 					state = 1;
 				}
 			} else if (state == 1) {
-				// printf("T");
+//				printf("T");
 				p->type = packet_read_buff[packet_read_buff_pos];
 				checksum_buff[1] = p->type;
 				state = 2;
 			} else if (state == 2) {
-				// printf("L");
+//				printf("L");
 				p->len = packet_read_buff[packet_read_buff_pos];
 				checksum_buff[2] = p->len;
 				if (p->len == 0) {
@@ -96,7 +97,7 @@ void IRAM_ATTR uart_sync_packet_read(pc_packet_interface::pc_packet *p) {
 					state = 3;
 				}
 			} else if (state == 3) {
-				// printf("D");
+//				printf("D");
 				p->data[outdata_pos] = packet_read_buff[packet_read_buff_pos];
 				checksum_buff[3+outdata_pos] = p->data[outdata_pos];
 				outdata_pos++;
@@ -113,7 +114,7 @@ void IRAM_ATTR uart_sync_packet_read(pc_packet_interface::pc_packet *p) {
 //					printf("\nDEV PACKET %d %d\n", p->type, p->len);
 					return; // success
 				} else {
-					printf("WRONG CRC(%x %x %d %d)!\n", calc_checksum, p->checksum, p->len, 3+outdata_pos);
+					printf("WRONG CRC (%X %X %d %d)!\n", calc_checksum, p->checksum, p->len, 3 + outdata_pos);
 					state = 0;
 					outdata_pos = 0;
 				}
@@ -121,9 +122,11 @@ void IRAM_ATTR uart_sync_packet_read(pc_packet_interface::pc_packet *p) {
 			packet_read_buff_pos++;
 			packet_read_buff_data--;
 		}
+
 		int r = mainuart->read_bytes(packet_read_buff, 4, true);
+
 		if (r < 1) {
-			return; // error
+			return;		// error
 		}
 
 #if 0
@@ -159,6 +162,7 @@ void IRAM_ATTR sdr_rx_cb(void *ctx, cdsp_complex_t *data, int cnt) {
 
 void IRAM_ATTR n_bfsk_tx_cb(void *ctx) {
 	pc_packet_interface::pc_packet data_p;
+
 	data_p.type = pc_packet_interface::packetType_fromdev::PC_PI_PTD_N_TRANSMIT_COMPL;
 	data_p.len = 0;
 	uart_sync_packet_send(data_p);
@@ -172,9 +176,10 @@ void IRAM_ATTR n_packetmgr_rx_cb(void *ctx, int type, uint8_t *data, int cnt) {
 	if (type == 0) {
 		uint8_t errors = data[0];
 		pc_packet_interface::pc_packet data_p;
+
 		data_p.type = pc_packet_interface::packetType_fromdev::PC_PI_PTD_N_RX_DATA;
 		data_p.len = 1;
-		data_p.data[0] = (errors & 0b111111) | (0b00 << 6);
+		data_p.data[0] = ((errors & 0b111111) | (0b00 << 6));
 		dsp_mgr::apply_afc();
 		dsp_mgr::afc_search_mode = false;
 		uart_sync_packet_send(data_p);
@@ -182,12 +187,14 @@ void IRAM_ATTR n_packetmgr_rx_cb(void *ctx, int type, uint8_t *data, int cnt) {
 		uint8_t errors = data[0];
 		uint8_t typelen = data[1];
 		pc_packet_interface::pc_packet data_p;
+
 		data_p.type = pc_packet_interface::packetType_fromdev::PC_PI_PTD_N_RX_DATA;
 		data_p.len = 1;
-		data_p.data[0] = (errors & 0b111111) | (0b01 << 6);
+		data_p.data[0] = ((errors & 0b111111) | (0b01 << 6));
 		uart_sync_packet_send(data_p);
 	} else if (type == 3) {
 		pc_packet_interface::pc_packet data_p;
+
 		data_p.type = pc_packet_interface::packetType_fromdev::PC_PI_PTD_N_RX_DATA;
 		data_p.len = 1;
 		data_p.data[0] = (0 & 0b111111) | (0b11 << 6);
@@ -198,6 +205,7 @@ void IRAM_ATTR n_packetmgr_rx_cb(void *ctx, int type, uint8_t *data, int cnt) {
 		}
 	} else if (type == 2 || type == 4) {
 		pc_packet_interface::pc_packet data_p;
+
 		data_p.type = pc_packet_interface::packetType_fromdev::PC_PI_PTD_N_RX_DATA;
 		data_p.len = cnt+1;
 		if ((type == 2) == curr_rx_parity) {
@@ -214,11 +222,12 @@ void IRAM_ATTR n_packetmgr_rx_cb(void *ctx, int type, uint8_t *data, int cnt) {
 		xTaskNotifyGive(acksend_task_hdl);
 	} else if (type == 5) {
 		pc_packet_interface::pc_packet data_p;
+
 		data_p.type = pc_packet_interface::packetType_fromdev::PC_PI_PTD_N_RX_DATA;
-		data_p.len = cnt+1;
+		data_p.len = cnt + 1;
 		data_p.data[0] = (1 & 0b111111) | (0b10 << 6);
 		for (int i = 0; i < cnt; i++) {
-			data_p.data[i+1] = data[i];
+			data_p.data[i + 1] = data[i];
 		}
 		uart_sync_packet_send(data_p);
 	}
@@ -344,6 +353,7 @@ void IRAM_ATTR app_main(void) {
 					case pc_packet_interface::modes::PC_PI_MODE_NORMAL_BFSK: {
 						float speed = ((float*)p.data)[0];
 						float frdiff = ((float*)p.data)[1];
+
 						dsp_mgr::n_bfsk_set_params(-frdiff / 2, frdiff / 2, speed);
 						break;
 					}
@@ -354,6 +364,7 @@ void IRAM_ATTR app_main(void) {
 						int frcnt = roundf(((float*)p.data)[2]);
 						float space = frdiff / ((float)frcnt);
 						float frs[frcnt];
+
 						for (int i = 0; i < frcnt; i++) {
 							frs[i] = (space * ((i < frcnt / 2) ? i : i + 1)) - (frdiff / 2.0f);
 						}
@@ -363,6 +374,7 @@ void IRAM_ATTR app_main(void) {
 
 					case pc_packet_interface::modes::PC_PI_MODE_NORMAL_MSK: {
 						float speed = ((float*)p.data)[0];
+
 						dsp_mgr::n_msk_set_params(speed);
 						break;
 					}
@@ -376,7 +388,6 @@ void IRAM_ATTR app_main(void) {
 
 			case pc_packet_interface::packetType_frompc::PC_PI_PTP_RX_START: {
 				ackp.data[0] = 1;
-
 				switch (curr_mode) {
 					case pc_packet_interface::modes::PC_PI_MODE_SDR:
 						dsp_mgr::sdr_rx_start();
@@ -456,15 +467,19 @@ void IRAM_ATTR app_main(void) {
 					case pc_packet_interface::modes::PC_PI_MODE_SDR:
 						dsp_mgr::sdr_tx_stop(false);
 						break;
+
 					case pc_packet_interface::modes::PC_PI_MODE_NORMAL_BFSK:
 						dsp_mgr::n_bfsk_tx_stop(false);
 						break;
+
 					case pc_packet_interface::modes::PC_PI_MODE_NORMAL_MFSK:
 						dsp_mgr::n_mfsk_tx_stop(false);
 						break;
+
 					case pc_packet_interface::modes::PC_PI_MODE_NORMAL_MSK:
 						dsp_mgr::n_msk_tx_stop(false);
 						break;
+
 					default:
 						ackp.data[0] = 0;
 				}
@@ -504,27 +519,33 @@ void IRAM_ATTR app_main(void) {
 				if (p.len < 2) {
 					break;
 				}
+
 				uint8_t namelen = p.data[0];
 				char name[16];
+
 				for (int i = 0; i < namelen; i++) {
 					name[i] = p.data[i + 1];
 				}
 				name[namelen] = '\0';
+
 				uint32_t def_val = 0;
 				char val[255];
-				// int len = params::readParam(std::string(name), val, &def_val, 255, 0);
+//				int len = params::readParam(std::string(name), val, &def_val, 255, 0);
 				int ret = params::readParam(std::string(name), (uint32_t*)&val, def_val);
+
 				if (ret != 0) {
-					// uint32_t def = 0;
-					// uint32_t rval = params::readParam(std::string(name), def);
+//					uint32_t def = 0;
+//					uint32_t rval = params::readParam(std::string(name), def);
 					ackp.data[0] = 1;
 					uart_sync_packet_send(ackp);
 //					vTaskDelay(10 / portTICK_PERIOD_MS);
 					ackp.type = pc_packet_interface::packetType_fromdev::PC_PI_PTD_PARAM_DATA;
 					ackp.len = 0;
-					// for (int i = 0; i < ackp.len; i++) {
-					//     ackp.data[i] = ((uint8_t*) &rval)[i];
-					// }
+#if 0
+					for (int i = 0; i < ackp.len; i++) {
+						ackp.data[i] = ((uint8_t*)&rval)[i];
+					}
+#endif
 				} else {
 					ackp.data[0] = 1;
 					uart_sync_packet_send(ackp);
@@ -542,14 +563,18 @@ void IRAM_ATTR app_main(void) {
 				if (p.len < 4) {
 					break;
 				}
+
 				uint8_t namelen = p.data[0];
 				char name[16];
+
 				for (int i = 0; i < namelen; i++) {
 					name[i] = p.data[i + 1];
 				}
 				name[namelen] = '\0';
+
 				uint8_t datalen = p.data[namelen + 1];
 				uint8_t data[datalen];
+
 				for (int i = 0; i < datalen; i++) {
 					data[i] = p.data[namelen + 2 + i];
 				}

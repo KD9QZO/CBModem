@@ -1,29 +1,29 @@
-#ifndef H_CHL_EXT_SI5351
-#define H_CHL_EXT_SI5351
+#ifndef CHL_EXT_SI5351_H_
+#define CHL_EXT_SI5351_H_
 
 #include <math.h>
 #include "chl_i2c.h"
 
 
-#define SI5351_MIN_PLL_FREQ 600000000
-#define SI5351_MAX_PLL_FREQ 900000000
-#define SI5351_FRACTIONAL_DIVIER 1000000 //1e6 is maximum round value
-#define SI5351_DEFAULT_FREQ 27500000
-#define SI5351_REG_STATUS 0
-#define SI5351_REG_OUTPUT_DIS 3
-#define SI5351_REG_OUTPUT_CTRL_BASE 16
-#define SI5351_REG_OUTPUT_DIS_STATE 24
-#define SI5351_REG_PLL_SOURCE 15
-#define SI5351_REG_XTAL_LOAD 183
-#define SI5351_REG_PHASE_OFFSET_BASE 165
-#define SI5351_REG_PLL_RESET 177
-#define SI5351_REG_PLLA_MUL_BASE 26
-#define SI5351_REG_PLLB_MUL_BASE 34
-#define SI5351_REG_MS0_DIV_BASE 42
-#define SI5351_REG_MS1_DIV_BASE 50
-#define SI5351_REG_MS2_DIV_BASE 58
-#define SI5351_MS_CFG_PLLA 0b00001111
-#define SI5351_MS_CFG_PLLB 0b00101111
+#define SI5351_MIN_PLL_FREQ				600000000
+#define SI5351_MAX_PLL_FREQ				900000000
+#define SI5351_FRACTIONAL_DIVIER		1000000 //1e6 is maximum round value
+#define SI5351_DEFAULT_FREQ				27500000
+#define SI5351_REG_STATUS				0
+#define SI5351_REG_OUTPUT_DIS			3
+#define SI5351_REG_OUTPUT_CTRL_BASE		16
+#define SI5351_REG_OUTPUT_DIS_STATE		24
+#define SI5351_REG_PLL_SOURCE			15
+#define SI5351_REG_XTAL_LOAD			183
+#define SI5351_REG_PHASE_OFFSET_BASE	165
+#define SI5351_REG_PLL_RESET			177
+#define SI5351_REG_PLLA_MUL_BASE		26
+#define SI5351_REG_PLLB_MUL_BASE		34
+#define SI5351_REG_MS0_DIV_BASE			42
+#define SI5351_REG_MS1_DIV_BASE			50
+#define SI5351_REG_MS2_DIV_BASE			58
+#define SI5351_MS_CFG_PLLA				0b00001111
+#define SI5351_MS_CFG_PLLB				0b00101111
 
 
 
@@ -48,11 +48,12 @@ private:
 	bool initialized = false;
 	uint8_t _addr;
 	unsigned int _xtal_freq;
-	chl_i2c* _i2c_drv;
+	chl_i2c *_i2c_drv;
 	uint32_t _curr_plla_freq = 0;
 	uint32_t _curr_pllb_freq = 0;
 	uint32_t _curr_center_out_freq = 0;
 	double _curr_freq_step = 0;
+
 	// Cache, to not write duplicate values
 	uint32_t _prev_plla_p1;
 	uint32_t _prev_plla_a = 0;
@@ -66,8 +67,8 @@ private:
 	bool _sync_set_divider(int pll, uint8_t base_reg, uint32_t a, uint32_t b);
 
 	// Fast PLL multipler's fractional part change for modulation; WARNING: _sync_set_divider for target pll should be called first!!!
-	void IRAM_ATTR _fast_change_pll_mul(bool pllB, uint32_t a, uint32_t b, int* yield);
+	void IRAM_ATTR _fast_change_pll_mul(bool pllB, uint32_t a, uint32_t b, int *yield);
 };
 
 
-#endif
+#endif	/* !CHL_EXT_SI5351_H_ */
