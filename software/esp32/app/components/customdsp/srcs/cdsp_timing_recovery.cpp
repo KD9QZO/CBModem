@@ -42,13 +42,13 @@ void cdsp_maximum_likelihood_tr<SPLS_T>::recalcLoopParams() {
 CDSP_TR_TPL
 void cdsp_maximum_likelihood_tr<SPLS_T>::update_shift(float shiftChange) {
     _decim_shift_frac += shiftChange;
-    while(_decim_shift_frac < 0.0f || _decim_shift_frac >= 1.0f) {
-        if(_decim_shift_frac < 0.0f) {
+    while (_decim_shift_frac < 0.0f || _decim_shift_frac >= 1.0f) {
+        if (_decim_shift_frac < 0.0f) {
             _decim_shift_int -= 1;
             _decim_ctr += 1;
             _decim_shift_frac += 1.0f;
         }
-        if(_decim_shift_frac >= 1.0f) {
+        if (_decim_shift_frac >= 1.0f) {
             _decim_shift_int += 1;
             _decim_ctr -= 1;
             _decim_shift_frac -= 1.0f;
@@ -63,13 +63,13 @@ float s = 0;
 CDSP_TR_TPL
 int cdsp_maximum_likelihood_tr<SPLS_T>::requestData(void* ctx, SPLS_T* data, int samples_cnt) {
     cdsp_maximum_likelihood_tr<SPLS_T>* _this = (cdsp_maximum_likelihood_tr<SPLS_T>*) ctx;
-    if(!_this->_running || _this->_input_func==NULL) {return -1;}
+    if (!_this->_running || _this->_input_func==NULL) {return -1;}
     int req_samples = std::min(samples_cnt, CDSP_DEF_BUFF_SIZE);
     int got_samples = 0;
-    while(got_samples < req_samples) {
-        if(_this->_buff_avail > 0) {
+    while (got_samples < req_samples) {
+        if (_this->_buff_avail > 0) {
             _this->_process_in_buff[_this->_process_in_buff_ctr] = _this->_in_buf[_this->_buff_ptr];
-            if(_this->_decim_ctr >= _this->_decim) {
+            if (_this->_decim_ctr >= _this->_decim) {
                 _this->_decim_ctr = 0;
                 int id_0 = (_this->_process_in_buff_ctr + 4 - 3) % 4;
                 int id_1 = (_this->_process_in_buff_ctr + 4 - 2) % 4;
@@ -92,14 +92,14 @@ int cdsp_maximum_likelihood_tr<SPLS_T>::requestData(void* ctx, SPLS_T* data, int
             float dbgerr = _this->_err;
             float dbgshift = ((_this->_decim_shift_int+_this->_decim_shift_frac)*1.0f)/((float)_this->_decim);
             if constexpr (std::is_same<SPLS_T, cdsp_complex_t>::value) {
-                if(s == 0) {
+                if (s == 0) {
 //                     printf("%d %f - - - %f\n", spl_id, _this->_in_buf[_this->_buff_ptr].i, _this->_in_buf[_this->_buff_ptr].q);
                 } else {
 //                     printf("%d %f %f %f %f %f\n", spl_id, _this->_in_buf[_this->_buff_ptr].i, s, dbgshift, dbgerr, _this->_in_buf[_this->_buff_ptr].q);
                     s = 0;
                 }
             } else {
-                if(s == 0) {
+                if (s == 0) {
 //                     printf("%d %f - - -\n", spl_id, _this->_in_buf[_this->_buff_ptr]);
                 } else {
 //                     printf("%d %f %f %f %f\n", spl_id, _this->_in_buf[_this->_buff_ptr], s, dbgshift, dbgerr);
@@ -119,7 +119,7 @@ int cdsp_maximum_likelihood_tr<SPLS_T>::requestData(void* ctx, SPLS_T* data, int
         } else {
             //Request new buffer
             int ind = _this->_input_func(_this->_func_call_ctx, _this->_in_buf, std::min(req_samples*_this->_decim, (int32_t)CDSP_DEF_BUFF_SIZE));
-            if(ind <= 0) {return ind;}
+            if (ind <= 0) {return ind;}
             _this->_buff_avail = ind;
             _this->_buff_ptr = 0;
         }
@@ -141,9 +141,9 @@ float cdsp_maximum_likelihood_tr<SPLS_T>::_ted_work() {
     error = std::erf(error);
     _err = error;
     _loop_i_buff += error*_loop_gain_i;
-    if(_loop_i_buff >= _loop_rel_limit) {
+    if (_loop_i_buff >= _loop_rel_limit) {
         _loop_i_buff = _loop_rel_limit;
-    } else if(_loop_i_buff <= -_loop_rel_limit) {
+    } else if (_loop_i_buff <= -_loop_rel_limit) {
         _loop_i_buff = -_loop_rel_limit;
     }
     return error*_loop_gain_p + _loop_i_buff;
