@@ -17,3 +17,13 @@ hardware/*.zip
 hardware/**/*.zip
 hardware/#auto_saved_files#
 hardware/*.kicad*-bak
+hardware/*.kicad*.lck
+hardware/bom/
+hardware/production/
+
+
+## SOFTWARE ##
+
+CMakeLists.txt.user
+software/pc/**/build-*/
+
